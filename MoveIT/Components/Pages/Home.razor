@@ -1,0 +1,125 @@
+@page "/"
+@rendermode InteractiveServer
+@using MoveIT.Models
+@using MoveIT.Services
+@inject InventoryService Svc
+@inject NavigationManager Nav
+
+<PageTitle>Dashboard — MoveIT</PageTitle>
+
+<h1 class="h3 mb-4">Move Dashboard</h1>
+
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+        <div class="card text-center h-100 border-primary">
+            <div class="card-body">
+                <div class="fs-2 fw-bold text-primary">@Svc.Items.Count</div>
+                <div class="text-muted">Total Items</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card text-center h-100 border-info">
+            <div class="card-body">
+                <div class="fs-2 fw-bold text-info">@Svc.TotalCubicFeet.ToString("F1") ft³</div>
+                <div class="text-muted">Total Volume</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card text-center h-100 border-warning">
+            <div class="card-body">
+                <div class="fs-2 fw-bold text-warning">@Svc.TotalWeight.ToString("F0") lbs</div>
+                <div class="text-muted">Est. Weight</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card text-center h-100 border-success">
+            <div class="card-body">
+                <div class="fs-2 fw-bold text-success">@PackedPercent%</div>
+                <div class="text-muted">Packed</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (Svc.Items.Any())
+{
+    <!-- Progress bar -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="d-flex justify-content-between mb-1">
+                <span class="fw-semibold">Packing Progress</span>
+                <span class="text-muted small">@Svc.Items.Count(x => x.Status != ItemStatus.NotPacked) / @Svc.Items.Count items</span>
+            </div>
+            <div class="progress" style="height:20px">
+                <div class="progress-bar bg-success" style="width:@PackedPercent%">@PackedPercent%</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- High priority unpacked items -->
+    @if (UrgentItems.Any())
+    {
+        <div class="card mb-4 border-danger">
+            <div class="card-header bg-danger text-white fw-semibold">
+                High Priority — Not Yet Packed (@UrgentItems.Count)
+            </div>
+            <ul class="list-group list-group-flush">
+                @foreach (var item in UrgentItems)
+                {
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span>
+                            <strong>@item.Name</strong>
+                            <span class="text-muted small ms-2">@item.Category · @(string.IsNullOrWhiteSpace(item.OriginRoom) ? "" : item.OriginRoom)</span>
+                        </span>
+                        @if (item.CubicFeet.HasValue)
+                        {
+                            <span class="badge bg-secondary">@item.CubicFeet ft³</span>
+                        }
+                    </li>
+                }
+            </ul>
+        </div>
+    }
+
+    <!-- By category breakdown -->
+    <div class="card mb-4">
+        <div class="card-header fw-semibold">Items by Category</div>
+        <div class="card-body">
+            <div class="row g-2">
+                @foreach (var grp in Svc.Items.GroupBy(x => x.Category).OrderByDescending(g => g.Count()))
+                {
+                    <div class="col-6 col-md-3">
+                        <div class="d-flex justify-content-between align-items-center border rounded px-3 py-2">
+                            <span class="small">@grp.Key</span>
+                            <span class="badge bg-primary rounded-pill">@grp.Count()</span>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+}
+else
+{
+    <div class="card">
+        <div class="card-body text-center py-5">
+            <p class="text-muted mb-3">No items tracked yet.</p>
+            <button class="btn btn-primary" @onclick='() => Nav.NavigateTo("/inventory")'>
+                Go to Inventory to add items
+            </button>
+        </div>
+    </div>
+}
+
+@code {
+    private int PackedPercent => Svc.Items.Count == 0 ? 0
+        : (int)(Svc.Items.Count(x => x.Status != ItemStatus.NotPacked) * 100.0 / Svc.Items.Count);
+
+    private List<MovingItem> UrgentItems => Svc.Items
+        .Where(x => x.Priority == Priority.High && x.Status == ItemStatus.NotPacked)
+        .OrderBy(x => x.Name)
+        .ToList();
+}

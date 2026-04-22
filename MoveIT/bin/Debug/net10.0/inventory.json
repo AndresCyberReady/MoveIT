@@ -1,0 +1,16 @@
+[
+  {
+    "Id": "7c3dc026-17d6-4abc-bcdd-a841cbbfa143",
+    "Name": "Bed Frame",
+    "OriginRoom": "Bedroom",
+    "DestinationRoom": "Master Bedroom",
+    "Category": 0,
+    "Priority": 0,
+    "Status": 0,
+    "WidthIn": 40,
+    "HeightIn": 40,
+    "DepthIn": 60,
+    "WeightLbs": 120,
+    "Notes": ""
+  }
+]

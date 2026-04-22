@@ -1,0 +1,467 @@
+@page "/inventory"
+@rendermode InteractiveServer
+@using MoveIT.Models
+@using MoveIT.Services
+@inject InventoryService Svc
+
+<PageTitle>Inventory — MoveIT</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h3 mb-0">Moving Inventory</h1>
+    <button class="btn btn-primary" @onclick="OpenAdd">+ Add Item</button>
+</div>
+
+<!-- Stats -->
+<div class="row g-3 mb-3">
+    <div class="col-6 col-md-3">
+        <div class="card text-center h-100">
+            <div class="card-body py-2">
+                <div class="fs-3 fw-bold text-primary">@Svc.Items.Count</div>
+                <div class="text-muted small">Total Items</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card text-center h-100">
+            <div class="card-body py-2">
+                <div class="fs-3 fw-bold text-info">@Svc.TotalCubicFeet.ToString("F1")</div>
+                <div class="text-muted small">Total ft³</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card text-center h-100">
+            <div class="card-body py-2">
+                <div class="fs-3 fw-bold text-warning">@Svc.TotalWeight.ToString("F0")</div>
+                <div class="text-muted small">Est. lbs</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card text-center h-100">
+            <div class="card-body py-2">
+                <div class="fs-3 fw-bold text-success">@PackedPercent%</div>
+                <div class="text-muted small">Packed</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Time Overview -->
+<div class="card mb-4 border-0 bg-light">
+    <div class="card-body py-2 px-3">
+        <div class="d-flex align-items-center gap-2 mb-2">
+            <span class="text-muted small fw-semibold text-uppercase" style="letter-spacing:.05em">Time Overview</span>
+            <hr class="flex-grow-1 my-0" />
+        </div>
+        <div class="row g-2 text-center">
+            <div class="col-4">
+                <div class="fs-4 fw-bold text-primary">@FormatMinutes(Svc.TotalUnpackMinutes)</div>
+                <div class="text-muted small">Unpack</div>
+            </div>
+            <div class="col-4 border-start border-end">
+                <div class="fs-4 fw-bold text-purple">@FormatMinutes(Svc.TotalSetupMinutes)</div>
+                <div class="text-muted small">Setup / Deploy</div>
+            </div>
+            <div class="col-4">
+                <div class="fs-4 fw-bold text-dark">@FormatMinutes(Svc.TotalUnpackMinutes + Svc.TotalSetupMinutes)</div>
+                <div class="text-muted small">Total Est. Time</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="row g-2 mb-3">
+    <div class="col-12 col-md-4">
+        <input class="form-control" placeholder="Search by name or notes..." @bind="_search" @bind:event="oninput" />
+    </div>
+    <div class="col-6 col-md-2">
+        <select class="form-select" @bind="_filterCategory">
+            <option value="">All Categories</option>
+            @foreach (var c in Enum.GetValues<ItemCategory>())
+            {
+                <option value="@c">@c</option>
+            }
+        </select>
+    </div>
+    <div class="col-6 col-md-2">
+        <select class="form-select" @bind="_filterRoom">
+            <option value="">All Rooms</option>
+            @foreach (var r in AllRooms)
+            {
+                <option value="@r">@r</option>
+            }
+        </select>
+    </div>
+    <div class="col-6 col-md-2">
+        <select class="form-select" @bind="_filterPriority">
+            <option value="">All Priorities</option>
+            @foreach (var p in Enum.GetValues<Priority>())
+            {
+                <option value="@p">@p</option>
+            }
+        </select>
+    </div>
+    <div class="col-6 col-md-2">
+        <select class="form-select" @bind="_filterStatus">
+            <option value="">All Statuses</option>
+            @foreach (var s in Enum.GetValues<ItemStatus>())
+            {
+                <option value="@s">@s</option>
+            }
+        </select>
+    </div>
+</div>
+
+<!-- Items Table -->
+<div class="table-responsive">
+    <table class="table table-hover align-middle">
+        <thead class="table-light">
+            <tr>
+                <th>Name</th>
+                <th>Category</th>
+                <th>From → To</th>
+                <th>Dimensions (W×H×D in)</th>
+                <th>ft³</th>
+                <th>Weight</th>
+                <th>Est. Time</th>
+                <th>Priority</th>
+                <th>Status</th>
+                <th>Notes</th>
+                <th style="width:90px"></th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (!FilteredItems.Any())
+            {
+                <tr>
+                    <td colspan="11" class="text-center text-muted py-5">
+                        No items yet. Click <strong>+ Add Item</strong> to start tracking.
+                    </td>
+                </tr>
+            }
+            @foreach (var item in FilteredItems)
+            {
+                <tr>
+                    <td class="fw-semibold">@item.Name</td>
+                    <td><span class="badge bg-secondary">@item.Category</span></td>
+                    <td class="small text-nowrap">
+                        @(string.IsNullOrWhiteSpace(item.OriginRoom) ? "—" : item.OriginRoom)
+                        @if (!string.IsNullOrWhiteSpace(item.DestinationRoom))
+                        {
+                            <span> → @item.DestinationRoom</span>
+                        }
+                    </td>
+                    <td class="small font-monospace text-nowrap">@item.DimensionsDisplay</td>
+                    <td class="small">@(item.CubicFeet?.ToString("F2") ?? "—")</td>
+                    <td class="small text-nowrap">@(item.WeightLbs.HasValue ? $"{item.WeightLbs} lbs" : "—")</td>
+                    <td class="small text-nowrap">
+                        @if (item.TotalMinutes.HasValue)
+                        {
+                            <span title="Unpack: @FormatMinutes(item.UnpackMinutes) / Setup: @FormatMinutes(item.SetupMinutes)">
+                                @FormatMinutes(item.TotalMinutes)
+                            </span>
+                        }
+                        else
+                        {
+                            <span class="text-muted">—</span>
+                        }
+                    </td>
+                    <td><span class="badge @PriorityBadge(item.Priority)">@item.Priority</span></td>
+                    <td><span class="badge @StatusBadge(item.Status)">@item.Status</span></td>
+                    <td class="small text-muted" style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="@item.Notes">@item.Notes</td>
+                    <td>
+                        <div class="d-flex gap-1">
+                            <button class="btn btn-sm btn-outline-primary" @onclick="() => OpenEdit(item)">Edit</button>
+                            <button class="btn btn-sm btn-outline-danger" @onclick="() => ConfirmDelete(item)">Del</button>
+                        </div>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+<!-- Add/Edit Modal -->
+@if (_showForm)
+{
+    <div class="modal show d-block" tabindex="-1" style="background:rgba(0,0,0,0.5)">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">@(_editingId.HasValue ? "Edit Item" : "Add Item")</h5>
+                    <button type="button" class="btn-close" @onclick="CloseForm"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-12 col-md-6">
+                            <label class="form-label fw-semibold">Name *</label>
+                            <input class="form-control" @bind="_form.Name" placeholder="e.g., Sofa, TV Stand, Box #3" />
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <label class="form-label fw-semibold">Category</label>
+                            <select class="form-select" @bind="_form.Category">
+                                @foreach (var c in Enum.GetValues<ItemCategory>())
+                                {
+                                    <option value="@c">@c</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <label class="form-label fw-semibold">Priority</label>
+                            <select class="form-select" @bind="_form.Priority">
+                                @foreach (var p in Enum.GetValues<Priority>())
+                                {
+                                    <option value="@p">@p</option>
+                                }
+                            </select>
+                        </div>
+
+                        <div class="col-6 col-md-4">
+                            <label class="form-label fw-semibold">Origin Room</label>
+                            <input class="form-control" @bind="_form.OriginRoom" list="rooms-list" placeholder="Current room" />
+                        </div>
+                        <div class="col-6 col-md-4">
+                            <label class="form-label fw-semibold">Destination Room</label>
+                            <input class="form-control" @bind="_form.DestinationRoom" list="rooms-list" placeholder="New room" />
+                        </div>
+                        <div class="col-6 col-md-4">
+                            <label class="form-label fw-semibold">Status</label>
+                            <select class="form-select" @bind="_form.Status">
+                                @foreach (var s in Enum.GetValues<ItemStatus>())
+                                {
+                                    <option value="@s">@s</option>
+                                }
+                            </select>
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Dimensions (inches) — Width × Height × Depth</label>
+                            <div class="row g-2">
+                                <div class="col-4">
+                                    <div class="input-group">
+                                        <input type="number" class="form-control" @bind="_form.WidthIn" placeholder="Width" min="0" step="0.5" />
+                                        <span class="input-group-text">in</span>
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="input-group">
+                                        <input type="number" class="form-control" @bind="_form.HeightIn" placeholder="Height" min="0" step="0.5" />
+                                        <span class="input-group-text">in</span>
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="input-group">
+                                        <input type="number" class="form-control" @bind="_form.DepthIn" placeholder="Depth" min="0" step="0.5" />
+                                        <span class="input-group-text">in</span>
+                                    </div>
+                                </div>
+                            </div>
+                            @if (_form.CubicFeet.HasValue)
+                            {
+                                <div class="form-text text-success fw-semibold">Volume: @_form.CubicFeet.Value.ToString("F2") ft³</div>
+                            }
+                        </div>
+
+                        <div class="col-6 col-md-4">
+                            <label class="form-label fw-semibold">Weight (lbs)</label>
+                            <div class="input-group">
+                                <input type="number" class="form-control" @bind="_form.WeightLbs" placeholder="Optional" min="0" step="0.5" />
+                                <span class="input-group-text">lbs</span>
+                            </div>
+                        </div>
+
+                        <div class="col-6 col-md-4">
+                            <label class="form-label fw-semibold">Unpack Time</label>
+                            <div class="input-group">
+                                <input type="number" class="form-control" @bind="_form.UnpackMinutes" placeholder="Optional" min="0" step="5" />
+                                <span class="input-group-text">min</span>
+                            </div>
+                        </div>
+
+                        <div class="col-6 col-md-4">
+                            <label class="form-label fw-semibold">Setup / Deploy Time</label>
+                            <div class="input-group">
+                                <input type="number" class="form-control" @bind="_form.SetupMinutes" placeholder="Optional" min="0" step="5" />
+                                <span class="input-group-text">min</span>
+                            </div>
+                            @if (_form.TotalMinutes.HasValue)
+                            {
+                                <div class="form-text text-primary fw-semibold">Total: @FormatMinutes(_form.TotalMinutes)</div>
+                            }
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Notes</label>
+                            <textarea class="form-control" @bind="_form.Notes" rows="2"
+                                placeholder="Fragile? Needs disassembly? Special handling instructions?" />
+                        </div>
+                    </div>
+
+                    <datalist id="rooms-list">
+                        @foreach (var r in _commonRooms)
+                        {
+                            <option value="@r" />
+                        }
+                    </datalist>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @onclick="CloseForm">Cancel</button>
+                    <button class="btn btn-primary" @onclick="Save" disabled="@string.IsNullOrWhiteSpace(_form.Name)">
+                        @(_editingId.HasValue ? "Save Changes" : "Add Item")
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Delete Confirm Modal -->
+@if (_deleteTarget is not null)
+{
+    <div class="modal show d-block" tabindex="-1" style="background:rgba(0,0,0,0.5)">
+        <div class="modal-dialog modal-sm">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Delete Item</h5>
+                    <button type="button" class="btn-close" @onclick="() => _deleteTarget = null"></button>
+                </div>
+                <div class="modal-body">
+                    Remove <strong>@_deleteTarget.Name</strong>?
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary btn-sm" @onclick="() => _deleteTarget = null">Cancel</button>
+                    <button class="btn btn-danger btn-sm" @onclick="DeleteConfirmed">Delete</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private bool _showForm;
+    private Guid? _editingId;
+    private MovingItem _form = new();
+    private MovingItem? _deleteTarget;
+
+    private string _search = "";
+    private string _filterCategory = "";
+    private string _filterRoom = "";
+    private string _filterStatus = "";
+    private string _filterPriority = "";
+
+    private static readonly string[] _commonRooms =
+    [
+        "Living Room", "Master Bedroom", "Bedroom 2", "Bedroom 3",
+        "Kitchen", "Dining Room", "Bathroom", "Office",
+        "Garage", "Basement", "Attic", "Storage Room"
+    ];
+
+    private IEnumerable<string> AllRooms => Svc.Items
+        .SelectMany(x => new[] { x.OriginRoom, x.DestinationRoom })
+        .Where(r => !string.IsNullOrWhiteSpace(r))
+        .Distinct()
+        .OrderBy(r => r);
+
+    private IEnumerable<MovingItem> FilteredItems => Svc.Items
+        .Where(x => string.IsNullOrEmpty(_search) ||
+            x.Name.Contains(_search, StringComparison.OrdinalIgnoreCase) ||
+            x.Notes.Contains(_search, StringComparison.OrdinalIgnoreCase))
+        .Where(x => string.IsNullOrEmpty(_filterCategory) || x.Category.ToString() == _filterCategory)
+        .Where(x => string.IsNullOrEmpty(_filterRoom) ||
+            x.OriginRoom == _filterRoom || x.DestinationRoom == _filterRoom)
+        .Where(x => string.IsNullOrEmpty(_filterPriority) || x.Priority.ToString() == _filterPriority)
+        .Where(x => string.IsNullOrEmpty(_filterStatus) || x.Status.ToString() == _filterStatus)
+        .OrderBy(x => x.Priority)
+        .ThenBy(x => x.Name);
+
+    private int PackedPercent => Svc.Items.Count == 0 ? 0
+        : (int)(Svc.Items.Count(x => x.Status != ItemStatus.NotPacked) * 100.0 / Svc.Items.Count);
+
+    private void OpenAdd()
+    {
+        _form = new MovingItem();
+        _editingId = null;
+        _showForm = true;
+    }
+
+    private void OpenEdit(MovingItem item)
+    {
+        _form = new MovingItem
+        {
+            Id = item.Id,
+            Name = item.Name,
+            OriginRoom = item.OriginRoom,
+            DestinationRoom = item.DestinationRoom,
+            Category = item.Category,
+            Priority = item.Priority,
+            Status = item.Status,
+            WidthIn = item.WidthIn,
+            HeightIn = item.HeightIn,
+            DepthIn = item.DepthIn,
+            WeightLbs = item.WeightLbs,
+            UnpackMinutes = item.UnpackMinutes,
+            SetupMinutes = item.SetupMinutes,
+            Notes = item.Notes
+        };
+        _editingId = item.Id;
+        _showForm = true;
+    }
+
+    private void Save()
+    {
+        if (string.IsNullOrWhiteSpace(_form.Name)) return;
+        if (_editingId.HasValue)
+            Svc.Update(_form);
+        else
+            Svc.Add(_form);
+        CloseForm();
+    }
+
+    private void ConfirmDelete(MovingItem item) => _deleteTarget = item;
+
+    private void DeleteConfirmed()
+    {
+        if (_deleteTarget is not null)
+            Svc.Remove(_deleteTarget.Id);
+        _deleteTarget = null;
+    }
+
+    private void CloseForm()
+    {
+        _showForm = false;
+        _form = new();
+        _editingId = null;
+    }
+
+    private static string FormatMinutes(int? minutes)
+    {
+        if (!minutes.HasValue || minutes.Value <= 0) return "—";
+        var h = minutes.Value / 60;
+        var m = minutes.Value % 60;
+        return (h, m) switch
+        {
+            (> 0, > 0) => $"{h}h {m}m",
+            (> 0, 0)   => $"{h}h",
+            _          => $"{m}m"
+        };
+    }
+
+    private static string PriorityBadge(Priority p) => p switch
+    {
+        Priority.High => "bg-danger",
+        Priority.Medium => "bg-warning text-dark",
+        Priority.Low => "bg-success",
+        _ => "bg-secondary"
+    };
+
+    private static string StatusBadge(ItemStatus s) => s switch
+    {
+        ItemStatus.NotPacked => "bg-secondary",
+        ItemStatus.Packed => "bg-info text-dark",
+        ItemStatus.Loaded => "bg-primary",
+        ItemStatus.Delivered => "bg-success",
+        _ => "bg-secondary"
+    };
+}
