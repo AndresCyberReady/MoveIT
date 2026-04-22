@@ -11,6 +11,8 @@
     "HeightIn": 40,
     "DepthIn": 60,
     "WeightLbs": 120,
-    "Notes": ""
+    "Notes": "",
+    "UnpackMinutes": 30,
+    "SetupMinutes": 130
   }
 ]

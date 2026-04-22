@@ -84,3 +84,4 @@ C:\Users\Andre\source\repos\MoveIT\MoveIT\obj\Debug\net10.0\MoveIT.pdb
 C:\Users\Andre\source\repos\MoveIT\MoveIT\obj\Debug\net10.0\MoveIT.genruntimeconfig.cache
 C:\Users\Andre\source\repos\MoveIT\MoveIT\obj\Debug\net10.0\ref\MoveIT.dll
 C:\Users\Andre\source\repos\MoveIT\MoveIT\bin\Debug\net10.0\inventory.json
+C:\Users\Andre\source\repos\MoveIT\MoveIT\obj\Debug\net10.0\MoveIT.sourcelink.json
