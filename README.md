@@ -29,6 +29,41 @@ A self-hosted moving inventory tracker built with Blazor Server on .NET 10. Trac
 **Persistence**
 - Inventory is saved to a local `inventory.json` file — no database required
 
+## Docker
+
+The easiest way to run MoveIT is via Docker. The image is published to Docker Hub at [`ayeeandre/moveit`](https://hub.docker.com/r/ayeeandre/moveit).
+
+**Run with Docker:**
+```bash
+docker run -d -p 8080:8080 --name moveit ayeeandre/moveit:latest
+```
+Then open `http://localhost:8080` in your browser.
+
+**Run with Docker Compose:**
+```yaml
+services:
+  moveit:
+    image: ayeeandre/moveit:latest
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+```
+
+**Portainer:** Pull `ayeeandre/moveit:latest` and map host port `8080` → container port `8080`.
+
+> **Note on persistence:** The inventory is stored inside the container at `/app/inventory.json`. To persist data across container restarts, mount a volume:
+> ```bash
+> docker run -d -p 8080:8080 -v moveit_data:/app --name moveit ayeeandre/moveit:latest
+> ```
+
+**Build from source:**
+```bash
+git clone https://github.com/AndresCyberReady/MoveIT.git
+cd MoveIT
+docker build -t moveit:latest .
+docker run -d -p 8080:8080 moveit:latest
+```
+
 ## Tech Stack
 
 | Layer | Technology |
@@ -40,10 +75,16 @@ A self-hosted moving inventory tracker built with Blazor Server on .NET 10. Trac
 
 ## Getting Started
 
-**Prerequisites:** [.NET 10 SDK](https://dotnet.microsoft.com/download)
+**Quickest way — Docker:**
+```bash
+docker run -d -p 8080:8080 ayeeandre/moveit:latest
+```
+Open `http://localhost:8080`.
+
+**Run from source — Prerequisites:** [.NET 10 SDK](https://dotnet.microsoft.com/download)
 
 ```bash
-git clone https://github.com/your-username/MoveIT.git
+git clone https://github.com/AndresCyberReady/MoveIT.git
 cd MoveIT/MoveIT
 dotnet run
 ```
