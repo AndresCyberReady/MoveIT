@@ -13,16 +13,5 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: "10.0.x"
-
-      - name: Restore
-        run: dotnet restore MoveIT/MoveIT.csproj
-
-      - name: Build
-        run: dotnet build MoveIT/MoveIT.csproj -c Release --no-restore
-
-      - name: Docker build check
+      - name: Docker build
         run: docker build -t moveit:ci .
